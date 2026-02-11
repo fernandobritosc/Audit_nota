@@ -91,6 +91,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileChange }) => {
       </div>
     );
   }
+  
   return (
     <div
       onDrop={handleDrop}
