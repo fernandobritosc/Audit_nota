@@ -207,14 +207,17 @@ const App: React.FC = () => {
           <div className="absolute top-0 right-0">
             <ThemeToggle />
           </div>
-          <div className="flex justify-center items-center gap-3 mb-2">
+          <div className="flex justify-center items-center gap-3 mb-1">
             <LogoIcon className="h-10 w-10 text-slate-700 dark:text-slate-300"/>
             <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
               Cálculo de Retenções
             </h1>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
-            Automatize sua planilha de retenções com IA ou calcule manualmente.
+          <p className="text-lg font-medium text-slate-600 dark:text-slate-300">
+            Prefeitura Municipal de Senador Canedo - GO
+          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Gerência de Contabilidade - SEFAZ
           </p>
         </header>
 
@@ -296,7 +299,12 @@ const App: React.FC = () => {
         )}
 
         <footer className="text-center mt-8 text-sm text-slate-400 dark:text-slate-500 no-print">
-            <p>Powered by Google Gemini API. © {new Date().getFullYear()} Fiscal Audit Assistant.</p>
+          <p>
+            © {new Date().getFullYear()} Prefeitura Municipal de Senador Canedo - GO | Gerência de Contabilidade - SEFAZ
+          </p>
+          <p className="text-xs mt-1">
+            Powered by Google Gemini API.
+          </p>
         </footer>
       </div>
     </div>
