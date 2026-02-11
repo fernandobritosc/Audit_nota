@@ -47,6 +47,7 @@ const ResultsCard: React.FC<ResultsCardProps> = ({ data, onTaxStatusChange, onVa
 
     const [isIrOpen, setIsIrOpen] = useState(false);
     const irDropdownRef = useRef<HTMLDivElement>(null);
+    const [isJsonVisible, setIsJsonVisible] = useState(false);
 
 
     // Close dropdown on outside click
@@ -304,21 +305,35 @@ const ResultsCard: React.FC<ResultsCardProps> = ({ data, onTaxStatusChange, onVa
         </div>
 
         <div className="bg-slate-50/70 p-4 rounded-b-xl border-t border-slate-200 results-json-section">
-             <h3 className="text-sm font-semibold text-slate-700 mb-2">JSON para Integração</h3>
-            <div className="relative bg-slate-900 rounded-lg">
-                <pre className="p-4 text-sm text-slate-100 overflow-x-auto">
-                    <code>{jsonData}</code>
-                </pre>
-                 <button 
-                    onClick={handleCopyJson}
-                    className="absolute top-2 right-2 p-2 bg-slate-700/80 rounded-md hover:bg-slate-600 transition-colors"
-                    >
-                    {copied ? (
-                        <CheckIcon className="h-5 w-5 text-green-400" />
-                    ) : (
-                        <ClipboardIcon className="h-5 w-5 text-slate-300" />
-                    )}
-                </button>
+             <button
+                onClick={() => setIsJsonVisible(!isJsonVisible)}
+                className="w-full flex justify-between items-center text-left focus:outline-none group"
+                aria-expanded={isJsonVisible}
+                aria-controls="json-content"
+            >
+                <h3 className="text-sm font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">JSON para Integração</h3>
+                <ChevronDownIcon className={`h-5 w-5 text-slate-500 transition-transform duration-200 ${isJsonVisible ? 'rotate-180' : ''}`} />
+            </button>
+            <div 
+                id="json-content"
+                className={`transition-[max-height,margin] duration-500 ease-in-out overflow-hidden ${isJsonVisible ? 'max-h-96 mt-2' : 'max-h-0'}`}
+            >
+                <div className="relative bg-slate-900 rounded-lg">
+                    <pre className="p-4 text-sm text-slate-100 overflow-x-auto">
+                        <code>{jsonData}</code>
+                    </pre>
+                     <button 
+                        onClick={handleCopyJson}
+                        className="absolute top-2 right-2 p-2 bg-slate-700/80 rounded-md hover:bg-slate-600 transition-colors"
+                        aria-label="Copiar JSON"
+                        >
+                        {copied ? (
+                            <CheckIcon className="h-5 w-5 text-green-400" />
+                        ) : (
+                            <ClipboardIcon className="h-5 w-5 text-slate-300" />
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     </div>
