@@ -1,1 +1,0 @@
-Não é possível localizar o módulo '../config/issRates.ts' ou suas declarações de tipo correspondentes.
