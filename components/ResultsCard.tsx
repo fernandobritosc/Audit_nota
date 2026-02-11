@@ -2,7 +2,7 @@
 import React, { useState, memo } from 'react';
 import { type CalculatedData } from '../types.ts';
 import { reinfCodes } from '../reinfCodes.ts';
-import { irrfRates, issRates } from '../config.ts';
+import { irrfRates } from '../config.ts';
 import { useClickOutside } from '../hooks/useClickOutside.ts';
 import { CheckIcon, ClipboardIcon, InfoIcon, ExternalLinkIcon, ChevronDownIcon } from './icons.tsx';
 
@@ -46,14 +46,11 @@ const ResultsCard: React.FC<ResultsCardProps> = ({ data, onTaxStatusChange, onVa
     const [isReinfOpen, setIsReinfOpen] = useState(false);
     const [reinfSearch, setReinfSearch] = useState('');
     const [isIrOpen, setIsIrOpen] = useState(false);
-    const [isIssOpen, setIsIssOpen] = useState(false);
     const [isJsonVisible, setIsJsonVisible] = useState(false);
     const [isEditingIr, setIsEditingIr] = useState(false);
-    const [isEditingIss, setIsEditingIss] = useState(false);
     
     const reinfDropdownRef = useClickOutside<HTMLDivElement>(() => setIsReinfOpen(false));
     const irDropdownRef = useClickOutside<HTMLDivElement>(() => setIsIrOpen(false));
-    const issDropdownRef = useClickOutside<HTMLDivElement>(() => setIsIssOpen(false));
 
 
     const selectedReinf = reinfCodes.find(c => c.code === data.codigoReinf) || reinfCodes[reinfCodes.length - 1];
@@ -142,16 +139,6 @@ const ResultsCard: React.FC<ResultsCardProps> = ({ data, onTaxStatusChange, onVa
     allIrrfRates.push({ value: 0, label: "0,00% (Isento/Outros)" });
     allIrrfRates.push({ value: -1, label: "Digitar valor..." });
     const selectedIrLabel = allIrrfRates.find(r => r.value === data.irrf.rate)?.label;
-
-    const allIssRates = [...issRates];
-    const currentIssRateExists = allIssRates.some(r => r.value === data.iss.rate);
-    if (!currentIssRateExists && data.iss.rate > 0) {
-        allIssRates.unshift({ value: data.iss.rate, label: `${data.iss.rate.toString().replace('.',',')}%` });
-    }
-    allIssRates.push({ value: 0, label: "0,00% (Não Retido)" });
-    allIssRates.push({ value: -1, label: "Digitar valor..." });
-    const selectedIssLabel = allIssRates.find(r => r.value === data.iss.rate)?.label;
-
 
   return (
     <div className="bg-white rounded-xl ">
@@ -299,57 +286,23 @@ const ResultsCard: React.FC<ResultsCardProps> = ({ data, onTaxStatusChange, onVa
 
                         {data.documentoTipo?.toUpperCase() !== 'PRODUTO' && (
                              <DetailRow 
-                                label="Alíquota ISS" 
+                                label="Alíquota ISS (%)" 
                                 value={
-                                     isEditingIss ? (
-                                        <input
-                                            type="text"
-                                            inputMode="decimal"
-                                            defaultValue={data.iss.rate.toString().replace('.', ',')}
-                                            onBlur={(e) => {
-                                                const newValue = parseFloat(e.target.value.replace(',', '.')) || 0;
-                                                onValueChange('aliquotaISS', newValue);
-                                                setIsEditingIss(false);
-                                            }}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                                            }}
-                                            autoFocus
-                                            className="w-full max-w-[280px] ml-auto bg-white border border-blue-500 rounded-md shadow-sm px-3 py-2 text-right focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                        />
-                                    ) : (
-                                        <div ref={issDropdownRef} className="relative w-full max-w-[280px] ml-auto print:max-w-none">
-                                            <button
-                                                onClick={() => setIsIssOpen(!isIssOpen)}
-                                                className="w-full bg-white border border-slate-300 rounded-md shadow-sm pl-3 pr-10 py-2 text-left focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm flex justify-between items-center print:py-1 print:text-xs print:shadow-none"
-                                            >
-                                                <span className="truncate">{selectedIssLabel}</span>
-                                                <ChevronDownIcon className={`h-5 w-5 text-slate-400 transition-transform no-print ${isIssOpen ? 'rotate-180' : ''}`} />
-                                            </button>
-                                            {isIssOpen && (
-                                                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg border border-slate-200 rounded-md no-print">
-                                                    <ul className="overflow-y-auto max-h-60">
-                                                        {allIssRates.map(rate => (
-                                                            <li
-                                                                key={rate.value === -1 ? 'custom-iss' : rate.value}
-                                                                onClick={() => {
-                                                                    if (rate.value === -1) {
-                                                                        setIsEditingIss(true);
-                                                                    } else {
-                                                                        onValueChange('aliquotaISS', rate.value);
-                                                                    }
-                                                                    setIsIssOpen(false);
-                                                                }}
-                                                                className="px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer"
-                                                            >
-                                                                {rate.label}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        key={`iss-rate-${data.iss.rate}`}
+                                        defaultValue={data.iss.rate.toString().replace('.', ',')}
+                                        onBlur={(e) => {
+                                            const newValue = parseFloat(e.target.value.replace(',', '.')) || 0;
+                                            onValueChange('aliquotaISS', newValue);
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                                        }}
+                                        className="w-full max-w-[120px] ml-auto bg-white border border-slate-300 rounded-md shadow-sm px-3 py-2 text-right focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                        placeholder="Ex: 5,00"
+                                    />
                                 } 
                             />
                         )}
