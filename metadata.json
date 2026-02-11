@@ -1,5 +1,0 @@
-{
-  "name": "Fiscal Audit Assistant",
-  "description": "An application to analyze fiscal documents (PDFs/images), extract key information like Razão Social, CNPJ, and Valor Bruto, and calculate Brazilian tax withholdings (IRRF and CSRF) based on user-provided rates.",
-  "requestFramePermissions": []
-}
