@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, memo } from 'react';
-import { UploadCloudIcon, XIcon } from './icons.tsx';
+import { UploadCloudIcon, XIcon } from './icons';
 
 interface FileUploaderProps {
   onFileChange: (files: File[]) => void;
