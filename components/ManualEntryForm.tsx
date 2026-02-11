@@ -14,11 +14,11 @@ type FormData = {
     aliquotaIR: string;
     aliquotaISS: string;
     municipioIncidencia: string;
-    valorINSS: string;
+    baseCalculoINSS: string;
 };
 
-const InputField: React.FC<{ label: string; id: keyof FormData; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void; type?: string; placeholder?: string, inputMode?: 'decimal' | 'text' }> = 
-    ({ label, id, value, onChange, type = "text", placeholder, inputMode = 'text' }) => (
+const InputField: React.FC<{ label: string; id: keyof FormData; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void; type?: string; placeholder?: string, inputMode?: 'decimal' | 'text', helpText?: string }> = 
+    ({ label, id, value, onChange, type = "text", placeholder, inputMode = 'text', helpText }) => (
     <div>
         <label htmlFor={id} className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             {label}
@@ -34,6 +34,7 @@ const InputField: React.FC<{ label: string; id: keyof FormData; value: string; o
             className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700"
             required={id === 'valorBruto'}
         />
+        {helpText && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{helpText}</p>}
     </div>
 );
 
@@ -62,7 +63,7 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({ onSubmit }) => {
         aliquotaIR: '0',
         aliquotaISS: '5',
         municipioIncidencia: 'Senador Canedo',
-        valorINSS: '',
+        baseCalculoINSS: '',
     });
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -72,6 +73,11 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({ onSubmit }) => {
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
+        
+        const baseINSS = parseFloat(formData.baseCalculoINSS.replace(',', '.')) || 0;
+        const aliquotaINSSValue = baseINSS > 0 ? 11 : 0;
+        const valorINSSValue = baseINSS * (aliquotaINSSValue / 100);
+
         const extractedData: ExtractedData = {
             razaoSocial: 'Cálculo Manual',
             cnpj: 'N/A',
@@ -83,7 +89,9 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({ onSubmit }) => {
             aliquotaISS: parseFloat(formData.aliquotaISS.replace(',', '.')) || 0,
             localServico: 'N/A',
             municipioIncidencia: formData.municipioIncidencia,
-            valorINSS: parseFloat(formData.valorINSS.replace(',', '.')) || 0,
+            valorINSS: valorINSSValue,
+            baseCalculoINSS: baseINSS,
+            aliquotaINSS: aliquotaINSSValue,
         };
         onSubmit(extractedData);
     };
@@ -135,12 +143,13 @@ const ManualEntryForm: React.FC<ManualEntryFormProps> = ({ onSubmit }) => {
             </div>
 
             <InputField 
-                label="Valor INSS (R$)" 
-                id="valorINSS" 
-                value={formData.valorINSS} 
+                label="Base de Cálculo INSS (R$)" 
+                id="baseCalculoINSS" 
+                value={formData.baseCalculoINSS} 
                 onChange={handleChange}
                 placeholder="Deixe em branco se não houver"
                 inputMode="decimal"
+                helpText="A alíquota de 11% será aplicada sobre este valor."
             />
 
             <button
