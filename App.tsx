@@ -87,15 +87,15 @@ const App: React.FC = () => {
       valorINSS: result.inss.value,
       baseCalculoINSS: result.inss.base,
       aliquotaINSS: result.inss.rate,
-      [key]: newValue, // Override the specific status
+      [key]: newValue,
     };
     
     const processedData = processTaxCalculations(dataForRecalc);
 
     setResult({
       ...result,
-      [key]: newValue,
       ...processedData,
+      [key]: newValue,
     });
   }, [result]);
 
@@ -124,6 +124,8 @@ const App: React.FC = () => {
         dataForRecalc.aliquotaIR = value as number;
     } else if (key === 'aliquotaISS') {
         dataForRecalc.aliquotaISS = value as number;
+    } else if (key === 'codigoReinf') {
+        dataForRecalc.codigoReinf = value as string;
     }
 
     const processedData = processTaxCalculations(dataForRecalc);
@@ -131,7 +133,7 @@ const App: React.FC = () => {
     setResult({
         ...result,
         ...processedData,
-        codigoReinf: key === 'codigoReinf' ? (value as string) : result.codigoReinf,
+        codigoReinf: dataForRecalc.codigoReinf,
     });
   }, [result]);
   
