@@ -3,32 +3,28 @@ import React, { useState, useCallback, memo } from 'react';
 import { UploadCloudIcon, XIcon } from './icons.tsx';
 
 interface FileUploaderProps {
-  onFileChange: (file: File | null) => void;
+  onFileChange: (files: File[]) => void;
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({ onFileChange }) => {
-  const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [fileName, setFileName] = useState<string>('');
+  const [fileCount, setFileCount] = useState<number>(0);
+  const [fileNames, setFileNames] = useState<string>('');
 
-  const handleFile = useCallback((file: File) => {
-    if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        // For simplicity, we'll use a generic placeholder for PDF preview
-        // A full PDF preview would require a library like pdf.js
-        if (file.type === 'application/pdf') {
-            setPreview('pdf');
+  const handleFiles = useCallback((files: FileList) => {
+    const validFiles: File[] = [];
+    for (const file of Array.from(files)) {
+        if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
+            validFiles.push(file);
         } else {
-            setPreview(reader.result as string);
+            alert(`Arquivo inválido ignorado: ${file.name}. Por favor, selecione apenas imagens ou PDFs.`);
         }
-        setFileName(file.name);
-        onFileChange(file);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      // Handle invalid file type
-      alert('Por favor, selecione um arquivo de imagem (JPEG, PNG) ou PDF.');
+    }
+    
+    if (validFiles.length > 0) {
+        setFileCount(validFiles.length);
+        setFileNames(validFiles.map(f => f.name).join(', '));
+        onFileChange(validFiles);
     }
   }, [onFileChange]);
 
@@ -53,42 +49,45 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileChange }) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(e.target.files);
     }
+     // Reset input value to allow selecting the same file again
+    e.target.value = '';
   };
 
-  const handleRemoveFile = () => {
-    setPreview(null);
-    setFileName('');
-    onFileChange(null);
+  const handleRemoveFiles = () => {
+    setFileCount(0);
+    setFileNames('');
+    onFileChange([]);
   };
 
-  if (preview) {
+  if (fileCount > 0) {
     return (
-      <div className="relative p-4 border border-slate-300 rounded-lg">
+      <div className="relative p-4 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700/30">
         <div className="flex items-center space-x-4">
-          {preview === 'pdf' ? (
-             <div className="w-16 h-16 bg-red-100 text-red-600 flex items-center justify-center rounded-lg font-bold text-lg">PDF</div>
-          ) : (
-            <img src={preview} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
-          )}
+           <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 flex items-center justify-center rounded-lg font-bold text-2xl flex-col">
+                <span>{fileCount}</span>
+                <span className="text-xs font-normal">{fileCount > 1 ? 'arquivos' : 'arquivo'}</span>
+            </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-800 truncate">{fileName}</p>
-            <p className="text-xs text-slate-500">Pronto para análise</p>
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate" title={fileNames}>
+                {fileCount > 1 ? `${fileCount} arquivos selecionados` : fileNames}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Pronto para análise</p>
           </div>
         </div>
         <button
-          onClick={handleRemoveFile}
-          className="absolute top-2 right-2 p-1 bg-slate-200 rounded-full hover:bg-slate-300 transition-colors"
+          onClick={handleRemoveFiles}
+          className="absolute top-2 right-2 p-1 bg-slate-200 dark:bg-slate-600 rounded-full hover:bg-slate-300 dark:hover:bg-slate-500 transition-colors"
         >
-          <XIcon className="h-4 w-4 text-slate-600" />
+          <XIcon className="h-4 w-4 text-slate-600 dark:text-slate-300" />
         </button>
       </div>
     );
@@ -101,14 +100,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({ onFileChange }) => {
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-        isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-slate-400 bg-slate-50/50'
+        isDragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500 bg-slate-50/50 dark:bg-slate-700/20'
       }`}
     >
-      <input type="file" id="file-upload" className="hidden" onChange={handleFileSelect} accept="image/*,application/pdf" />
+      <input type="file" id="file-upload" className="hidden" onChange={handleFileSelect} accept="image/*,application/pdf" multiple />
       <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
-        <UploadCloudIcon className="h-12 w-12 text-slate-400 mb-3" />
-        <span className="font-semibold text-slate-700">Clique para fazer upload ou arraste e solte</span>
-        <span className="text-sm text-slate-500 mt-1">PNG, JPG, ou PDF</span>
+        <UploadCloudIcon className="h-12 w-12 text-slate-400 dark:text-slate-500 mb-3" />
+        <span className="font-semibold text-slate-700 dark:text-slate-300">Clique para fazer upload ou arraste e solte</span>
+        <span className="text-sm text-slate-500 dark:text-slate-400 mt-1">PNG, JPG, ou PDF (múltiplos arquivos são aceitos)</span>
       </label>
     </div>
   );
