@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { type ExtractedData } from '../types.ts';
+import { type ExtractedData } from '../types';
 
 // Helper function to convert a base64 data URL to a GenerativePart object
 function fileToGenerativePart(dataUrl: string) {
