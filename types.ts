@@ -18,6 +18,7 @@ export interface ExtractedData {
 }
 
 export interface CalculatedData {
+    id?: number;
     razaoSocial: string;
     cnpj: string;
     numeroNF: string;
