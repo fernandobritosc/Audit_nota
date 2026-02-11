@@ -2,8 +2,7 @@
 import React, { useState, memo } from 'react';
 import { type CalculatedData } from '../types.ts';
 import { reinfCodes } from '../reinfCodes.ts';
-import { irrfRates } from '../config/taxRates.ts';
-import { issRates } from '../config/issRates.ts';
+import { irrfRates, issRates } from '../config.ts';
 import { useClickOutside } from '../hooks/useClickOutside.ts';
 import { CheckIcon, ClipboardIcon, InfoIcon, ExternalLinkIcon, ChevronDownIcon } from './icons.tsx';
 
