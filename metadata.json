@@ -1,0 +1,6 @@
+
+{
+  "name": "Cálculo de Retenções - Sefaz Senador Canedo",
+  "description": "Sistema para a Gerência de Contabilidade da Prefeitura Municipal de Senador Canedo - GO para automatizar o cálculo de retenções fiscais (IRRF, CSRF, ISS, INSS) a partir de documentos.",
+  "requestFramePermissions": []
+}
