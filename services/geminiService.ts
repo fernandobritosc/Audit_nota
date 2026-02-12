@@ -118,15 +118,15 @@ export async function extractInvoiceData(base64DataUrl: string): Promise<Extract
          if (error instanceof Error) {
             // Tenta dar uma mensagem de erro mais útil
             if (error.message.includes('API key not valid')) {
-                 // FIX: Updated error message to reflect environment configuration and not imply user action.
-                 throw new Error(`Erro de autenticação: A chave da API do Gemini fornecida não é válida. Se estiver em ambiente local, verifique seu arquivo .env. Se estiver no AI Studio, tente selecionar uma nova chave.`);
+                 // FIX: Updated error message to be more generic and not suggest user action on API key configuration.
+                 throw new Error('Erro de autenticação: A chave da API do Gemini fornecida não é válida.');
             }
              if (error.message.includes('permission denied')) {
                  // FIX: Updated error message to reflect environment configuration.
                  throw new Error(`Acesso negado: A chave da API do Gemini não possui as permissões necessárias.`);
             }
         }
-        // FIX: Updated generic error message.
-        throw new Error("Falha de comunicação com a IA do Google Gemini. Verifique a conexão com a internet e a configuração da API.");
+        // FIX: Updated generic error message to not mention API configuration.
+        throw new Error("Falha de comunicação com a IA do Google Gemini. Verifique a conexão com a internet.");
     }
 }
