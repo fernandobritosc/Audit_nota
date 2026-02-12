@@ -1,3 +1,2 @@
-
-// Este componente é obsoleto e não é mais utilizado.
-// A lógica do prompt de chave de API foi movida diretamente para o App.tsx para resolver um problema de importação de módulo.
+// ARQUIVO OBSOLETO: Este arquivo não é mais utilizado e pode ser excluído com segurança.
+// A lógica do prompt de chave de API foi movida para o componente ApiKeyEntryScreen.
