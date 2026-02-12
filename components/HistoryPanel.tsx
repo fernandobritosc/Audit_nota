@@ -1,7 +1,7 @@
 
 import React, { memo } from 'react';
 import { type CalculatedData } from '../types.ts';
-import { formatCurrency } from '../utils/formatters.ts';
+import { formatCurrency } from '../config/utils/formatters.ts';
 import { HistoryIcon, TrashIcon } from './icons.tsx';
 
 interface HistoryPanelProps {
