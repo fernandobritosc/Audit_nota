@@ -23,7 +23,7 @@ export async function extractInvoiceData(base64DataUrl: string, apiKey: string):
         throw new Error('A chave da API do Gemini é necessária para a análise.');
     }
     const ai = new GoogleGenAI({ apiKey });
-    
+
     const promptText = `
         Você é um assistente de auditoria fiscal. Analise o documento fiscal anexo e extraia as seguintes informações:
 
@@ -39,15 +39,15 @@ export async function extractInvoiceData(base64DataUrl: string, apiKey: string):
         10. "aliquotaISS": A alíquota de ISS em porcentagem. Retorne apenas o número (ex: para 3,29%, retorne 3.29).
         11. "documentoTipo": Classifique o documento. Se contiver termos como "DANFE", "venda", "produto" ou similar, retorne "PRODUTO". Se for uma nota fiscal de serviço, retorne "SERVICO". Se não for claro, retorne "INDEFINIDO".
         12. "codigoReinf": O código do serviço (natureza do rendimento). Extraia apenas o número de 5 dígitos (ex: 17032). Se não encontrar, retorne "".
-        13. "valorINSS": O valor da retenção de INSS. Extraia como um número.
-        14. "baseCalculoINSS": A base de cálculo para o INSS. Extraia como um número.
-        15. "aliquotaINSS": A alíquota de INSS em porcentagem. Retorne apenas o número.
+        13. "valorINSS": O valor da retenção de INSS (geralmente 11% sobre a base). Extraia como um número.
+        14. "baseCalculoINSS": A base de cálculo para o INSS (MUITO IMPORTANTE: procure por campos como "Base de Cálculo INSS", "BC INSS", ou valor sobre o qual o INSS de 11% foi aplicado. Frequentemente é diferente do valor bruto). Extraia como um número.
+        15. "aliquotaINSS": A alíquota de INSS em porcentagem. Retorne apenas o número (ex: 11).
 
         Se algum campo não for encontrado, retorne um valor padrão apropriado (string vazia "" ou 0 para números).
 
         O resultado deve ser um único objeto JSON.
     `;
-    
+
     const imagePart = fileToGenerativePart(base64DataUrl);
 
     const responseSchema = {
@@ -83,9 +83,9 @@ export async function extractInvoiceData(base64DataUrl: string, apiKey: string):
 
         const text = response.text;
         if (!text) {
-             throw new Error("A IA não retornou uma resposta válida. O conteúdo pode estar vazio.");
+            throw new Error("A IA não retornou uma resposta válida. O conteúdo pode estar vazio.");
         }
-        
+
         let parsedData: ExtractedData;
         try {
             parsedData = JSON.parse(text);
@@ -111,12 +111,12 @@ export async function extractInvoiceData(base64DataUrl: string, apiKey: string):
 
     } catch (error) {
         console.error("Erro ao chamar a API do Gemini:", error);
-         if (error instanceof Error) {
+        if (error instanceof Error) {
             if (error.message.includes('API key not valid')) {
-                 throw new Error('Erro de autenticação: A chave da API do Gemini fornecida não é válida. Por favor, verifique a chave e tente novamente.');
+                throw new Error('Erro de autenticação: A chave da API do Gemini fornecida não é válida. Por favor, verifique a chave e tente novamente.');
             }
-             if (error.message.includes('permission denied')) {
-                 throw new Error(`Acesso negado: A chave da API do Gemini não possui as permissões necessárias.`);
+            if (error.message.includes('permission denied')) {
+                throw new Error(`Acesso negado: A chave da API do Gemini não possui as permissões necessárias.`);
             }
         }
         throw new Error("Falha de comunicação com a IA do Google Gemini. Verifique a conexão com a internet e sua chave de API.");

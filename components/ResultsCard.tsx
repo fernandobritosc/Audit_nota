@@ -1,98 +1,125 @@
 
-import React, { useState, memo, useMemo, useEffect } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import { type CalculatedData, type LiquidationSplit } from '../types.ts';
 import { reinfCodes } from '../reinfCodes.ts';
-import { irrfRates } from '../config/taxConfig.ts';
-import { useClickOutside } from '../hooks/useClickOutside.ts';
-import { formatCurrency } from '../config/utils/formatters.ts';
+import { formatCurrency } from '../config/utilis/formatters.ts';
 import { CheckIcon, ClipboardIcon, InfoIcon, ExternalLinkIcon, ChevronDownIcon, SplitIcon, PlusCircleIcon, TrashIcon } from './icons.tsx';
 
 type ManualChangeKey = 'codigoReinf' | 'aliquotaIR' | 'aliquotaISS' | 'baseCalculoINSS' | 'aliquotaINSS';
 
 interface ResultsCardProps {
-  data: CalculatedData;
-  onTaxStatusChange: (key: 'optanteSimples' | 'isMei') => void;
-  onValueChange: (key: ManualChangeKey, value: string | number) => void;
+    data: CalculatedData;
+    onTaxStatusChange: (key: 'optanteSimples' | 'isMei') => void;
+    onValueChange: (key: ManualChangeKey, value: string | number) => void;
 }
 
-const StatusToggle: React.FC<{ status: string, onToggle: () => void }> = memo(({ status, onToggle }) => {
-    const isYes = status.toUpperCase() === 'SIM';
-    return (
-        <button 
-            onClick={onToggle}
-            className={`inline-block px-2.5 py-1 text-xs font-bold rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isYes ? 'bg-green-100 hover:bg-green-200 text-green-800 dark:bg-green-900/50 dark:hover:bg-green-900 dark:text-green-300' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300'}`}>
-            {status.toUpperCase()}
-        </button>
-    );
-});
-
-
-const DetailRow: React.FC<{ label: string; value: React.ReactNode }> = memo(({ label, value }) => (
-    <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700/50 min-h-[40px] print:py-1.5 print:min-h-0 print:border-slate-200">
-        <span className="text-sm text-slate-600 dark:text-slate-400 flex-shrink-0 mr-4 print:text-xs">{label}</span>
-        <div className="text-sm text-right font-medium text-slate-800 dark:text-slate-200 print:text-xs">
-             {value}
+const DetailRow: React.FC<{ label: string; value: React.ReactNode; mono?: boolean }> = memo(({ label, value, mono }) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 py-3 border-b border-slate-100 dark:border-slate-800/50 items-baseline gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500">{label}</span>
+        <div className={`text-sm font-medium text-slate-900 dark:text-slate-100 sm:text-right ${mono ? 'font-mono' : ''}`}>
+            {value}
         </div>
     </div>
 ));
 
+
+// Helper component for free-typing numbers (avoids "ATM style" masking while typing)
+const DecimalInput: React.FC<{
+    value: number;
+    onChange: (val: number) => void;
+    disabled?: boolean;
+    className?: string;
+    isCurrency?: boolean;
+}> = ({ value, onChange, disabled, className, isCurrency }) => {
+    const [localStr, setLocalStr] = useState<string | null>(null);
+
+    // Sync with external value changes when not editing
+    // We use a key-based approach or just blur logic. 
+    // Ideally, we only show localStr if it's not null.
+
+    const formattedValue = isCurrency
+        ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+        : value.toFixed(2).replace('.', ',');
+
+    const displayValue = localStr !== null ? localStr : formattedValue;
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalStr(e.target.value);
+    };
+
+    const handleBlur = () => {
+        if (localStr === null) return;
+
+        // Parse the local string to a number
+        // Support 1.000,00 or 1000.00
+        let normalized = localStr.replace(/\./g, '').replace(',', '.');
+        // Handle case where user might type just "1000" (implied .00)
+        let numVal = parseFloat(normalized);
+
+        if (isNaN(numVal)) numVal = 0;
+
+        onChange(numVal);
+        setLocalStr(null); // Return to formatted display
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.currentTarget.blur();
+        }
+    };
+
+    return (
+        <input
+            type="text"
+            value={displayValue}
+            disabled={disabled}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            className={className}
+        />
+    );
+};
+
 const ResultsCard: React.FC<ResultsCardProps> = ({ data, onTaxStatusChange, onValueChange }) => {
     const [copied, setCopied] = useState(false);
-    const [verifyCnpjText, setVerifyCnpjText] = useState('Verificar na Receita');
-    const [isReinfOpen, setIsReinfOpen] = useState(false);
-    const [reinfSearch, setReinfSearch] = useState('');
-    const [isIrOpen, setIsIrOpen] = useState(false);
+    const [verifyCnpjText, setVerifyCnpjText] = useState('Consultar Receita');
     const [isJsonVisible, setIsJsonVisible] = useState(false);
-    const [isEditingIr, setIsEditingIr] = useState(false);
     const [isSplitting, setIsSplitting] = useState(false);
     const [splits, setSplits] = useState<Omit<LiquidationSplit, 'irrf' | 'iss' | 'inss' | 'valorLiquido'>[]>([]);
-    
-    const reinfDropdownRef = useClickOutside<HTMLDivElement>(() => setIsReinfOpen(false));
-    const irDropdownRef = useClickOutside<HTMLDivElement>(() => setIsIrOpen(false));
 
     const selectedReinf = reinfCodes.find(c => c.code === data.codigoReinf) || reinfCodes[reinfCodes.length - 1];
-    const filteredReinfCodes = reinfCodes.filter(
-        item =>
-          item.code.toLowerCase().includes(reinfSearch.toLowerCase()) ||
-          item.description.toLowerCase().includes(reinfSearch.toLowerCase())
-    );
 
     const handleVerifyCnpj = () => {
         const cnpjToCopy = data.cnpj.replace(/[^\d]/g, '');
         navigator.clipboard.writeText(cnpjToCopy);
-        setVerifyCnpjText('CNPJ Copiado!');
+        setVerifyCnpjText('Copiado!');
         window.open('https://consopt.www8.receita.fazenda.gov.br/consultaoptantes', '_blank');
-        setTimeout(() => setVerifyCnpjText('Verificar na Receita'), 2500);
+        setTimeout(() => setVerifyCnpjText('Consultar Receita'), 2500);
     }
-    
-    // --- Lógica de Rateio (Splitting) ---
+
     const processedSplits = useMemo((): LiquidationSplit[] => {
         if (!isSplitting || !data.valorBruto) return [];
-
         let runningTotals = { irrf: 0, iss: 0, inss: 0 };
         const totalSplits = splits.length;
 
         return splits.map((split, index) => {
             const isLastSplit = index === totalSplits - 1;
-            let proportionalIrrf, proportionalIss, proportionalInss;
-
+            let pIrrf, pIss, pInss;
             if (!isLastSplit) {
-                const proportion = split.valorBruto > 0 && data.valorBruto > 0 ? split.valorBruto / data.valorBruto : 0;
-                proportionalIrrf = parseFloat((data.irrf.value * proportion).toFixed(2));
-                proportionalIss = parseFloat((data.iss.value * proportion).toFixed(2));
-                proportionalInss = parseFloat((data.inss.value * proportion).toFixed(2));
-
-                runningTotals.irrf += proportionalIrrf;
-                runningTotals.iss += proportionalIss;
-                runningTotals.inss += proportionalInss;
+                const prop = split.valorBruto > 0 && data.valorBruto > 0 ? split.valorBruto / data.valorBruto : 0;
+                pIrrf = parseFloat((data.irrf.value * prop).toFixed(2));
+                pIss = parseFloat((data.iss.value * prop).toFixed(2));
+                pInss = parseFloat((data.inss.value * prop).toFixed(2));
+                runningTotals.irrf += pIrrf;
+                runningTotals.iss += pIss;
+                runningTotals.inss += pInss;
             } else {
-                proportionalIrrf = parseFloat((data.irrf.value - runningTotals.irrf).toFixed(2));
-                proportionalIss = parseFloat((data.iss.value - runningTotals.iss).toFixed(2));
-                proportionalInss = parseFloat((data.inss.value - runningTotals.inss).toFixed(2));
+                pIrrf = parseFloat((data.irrf.value - runningTotals.irrf).toFixed(2));
+                pIss = parseFloat((data.iss.value - runningTotals.iss).toFixed(2));
+                pInss = parseFloat((data.inss.value - runningTotals.inss).toFixed(2));
             }
-
-            const valorLiquido = split.valorBruto - proportionalIrrf - proportionalIss - proportionalInss;
-            return { ...split, irrf: proportionalIrrf, iss: proportionalIss, inss: proportionalInss, valorLiquido };
+            return { ...split, irrf: pIrrf, iss: pIss, inss: pInss, valorLiquido: split.valorBruto - pIrrf - pIss - pInss };
         });
     }, [splits, data, isSplitting]);
 
@@ -117,54 +144,22 @@ const ResultsCard: React.FC<ResultsCardProps> = ({ data, onTaxStatusChange, onVa
         }
     };
 
-    const handleAddSplit = () => {
-        setSplits(prev => [...prev, { id: Date.now(), empenho: '', valorBruto: 0 }]);
-    };
-    
-    const handleRemoveSplit = (id: number) => {
-        setSplits(prev => prev.filter(split => split.id !== id));
-    };
-
+    const handleAddSplit = () => setSplits(prev => [...prev, { id: Date.now(), empenho: '', valorBruto: 0 }]);
+    const handleRemoveSplit = (id: number) => setSplits(prev => prev.filter(s => s.id !== id));
     const handleUpdateSplit = (id: number, field: 'empenho' | 'valorBruto', value: string) => {
-        setSplits(prev => prev.map(split => {
-            if (split.id === id) {
+        setSplits(prev => prev.map(s => {
+            if (s.id === id) {
                 if (field === 'valorBruto') {
-                    // Remove todos os caracteres não numéricos para criar uma máscara de moeda.
-                    const digitsOnly = value.replace(/\D/g, '');
-                    // Converte para número, tratando a entrada como centavos para uma digitação mais fluida.
-                    const numericValue = Number(digitsOnly) / 100;
-                    return { ...split, valorBruto: numericValue };
+                    const digits = value.replace(/\D/g, '');
+                    return { ...s, valorBruto: Number(digits) / 100 };
                 }
-                return { ...split, [field]: value };
+                return { ...s, [field]: value };
             }
-            return split;
+            return s;
         }));
     };
-    
-    const jsonData = JSON.stringify(
-        {
-            razaoSocial: data.razaoSocial,
-            cnpj: data.cnpj,
-            numeroNF: data.numeroNF,
-            documentoTipo: data.documentoTipo,
-            codigoReinf: data.codigoReinf,
-            optanteSimples: data.optanteSimples,
-            isMei: data.isMei,
-            localServico: data.localServico,
-            municipioIncidencia: data.municipioIncidencia,
-            valorBruto: data.valorBruto,
-            retencoes: { irrf: data.irrf, iss: data.iss, inss: data.inss },
-            valorLiquido: data.valorLiquido,
-            rateioPorEmpenho: isSplitting && Math.abs(remainingAmountToSplit) < 0.01 ? processedSplits.map(s => ({
-                empenho: s.empenho,
-                valorBruto: s.valorBruto,
-                irrf: s.irrf,
-                iss: s.iss,
-                inss: s.inss,
-                valorLiquido: s.valorLiquido
-            })) : undefined
-        }, null, 2
-    );
+
+    const jsonData = JSON.stringify(data, null, 2);
 
     const handleCopyJson = () => {
         navigator.clipboard.writeText(jsonData);
@@ -172,123 +167,294 @@ const ResultsCard: React.FC<ResultsCardProps> = ({ data, onTaxStatusChange, onVa
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const calculoItems = [
-        { label: 'Valor Bruto', value: formatCurrency(data.valorBruto), className: 'text-slate-800 dark:text-slate-100 font-medium' },
-        { label: `(-) Retenção I.R. (${data.irrf.rate.toString().replace('.',',')}%)`, value: formatCurrency(data.irrf.value), className: data.irrf.value > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400', observation: data.irrf.observacao },
-    ];
-    if (data.inss.base > 0 || data.inss.value > 0) {
-        const inssLabel = data.inss.base > 0 ? `(-) Retenção INSS (${data.inss.rate.toFixed(2).replace('.', ',')}% de ${formatCurrency(data.inss.base)})` : `(-) Retenção INSS`;
-        calculoItems.push({ label: inssLabel, value: formatCurrency(data.inss.value), className: data.inss.value > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400' });
-    }
-    calculoItems.push(
-        { label: `(-) Retenção ISS (${data.iss.rate.toString().replace('.',',')}%)`, value: formatCurrency(data.iss.value), className: data.iss.value > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400', observation: data.issObservacao },
-        { label: '(=) Valor Líquido a Pagar', value: formatCurrency(data.valorLiquido), className: 'text-slate-900 dark:text-slate-50 font-bold' }
-    );
-        
-    const allIrrfRates = [...irrfRates];
-    const currentIrRateExists = allIrrfRates.some(r => r.value === data.irrf.rate);
-    if (!currentIrRateExists && data.irrf.rate > 0) {
-        allIrrfRates.unshift({ value: data.irrf.rate, label: `${data.irrf.rate.toString().replace('.',',')}%` });
-    }
-    allIrrfRates.push({ value: 0, label: "0,00% (Isento/Outros)" });
-    allIrrfRates.push({ value: -1, label: "Digitar valor..." });
-    const selectedIrLabel = allIrrfRates.find(r => r.value === data.irrf.rate)?.label;
-
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl ">
-        <div className={`px-6 pt-4 pb-6 print:p-0 ${isSplitting ? 'print:hidden' : ''}`}>
-            <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4 text-center print:text-lg print:mb-4">Demonstrativo de Cálculo</h2>
-            <div className="space-y-4 print:space-y-3">
-                <DetailRow label="Fornecedor" value={<span className="truncate" title={data.razaoSocial}>{data.razaoSocial}</span>} />
-                <DetailRow label="CNPJ" value={<div className="flex items-center gap-2 justify-end"><span>{data.cnpj}</span><button onClick={handleVerifyCnpj} className="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 font-semibold py-1 px-2 rounded-md transition-colors no-print"><ExternalLinkIcon className="h-3 w-3" />{verifyCnpjText}</button></div>} />
-                <DetailRow label="Nº da NF" value={data.numeroNF} />
+    return (
+        <div className="bg-white dark:bg-slate-800 overflow-hidden">
+            {/* Report Header Identification */}
+            <div className="bg-slate-50 dark:bg-slate-900/50 px-8 py-5 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2 border-b dark:border-slate-700 pb-1 print:mb-1.5 print:text-xs">CÁLCULO DE RETENÇÕES</h3>
-                     <div className="space-y-2 pt-2 print:space-y-1 print:pt-1">
-                        {calculoItems.map((item, index) => (
-                             <div key={index}>
-                                <div className={`flex justify-between items-center py-1.5 ${index === calculoItems.length - 2 ? 'border-b-2 border-slate-200 dark:border-slate-600' : ''} print:py-1`}><span className={`text-sm ${item.className} print:text-xs`}>{item.label}</span><span className={`text-sm text-right ${item.className} print:text-xs`}>{item.value}</span></div>
-                                {item.observation && (<div className="flex justify-end items-center text-right text-xs text-blue-600 dark:text-blue-400 -mt-1 pb-1 pr-1 gap-1 print:text-[10px] print:text-slate-600"><InfoIcon className="h-3 w-3 print:h-2.5 print:w-2.5" /><span>{item.observation}</span></div>)}
-                             </div>
-                        ))}
+                    <h3 className="text-sm font-bold text-[#003366] dark:text-blue-400 uppercase tracking-widest">Relatório de Auditoria Fiscal</h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-500 font-medium">DOCUMENTO GERADO EM {new Date().toLocaleDateString('pt-BR')} ÀS {new Date().toLocaleTimeString('pt-BR')}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="flex h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></span>
+                    <span className="text-[10px] font-bold text-green-700 dark:text-green-500 uppercase tracking-wider">Análise Concluída</span>
+                </div>
+            </div>
+
+            <div className="p-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    {/* Section: Identificação */}
+                    <div className="lg:col-span-12">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="h-4 w-1 bg-[#003366] dark:bg-blue-500 rounded-full"></div>
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Identificação do Objeto</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 border-t border-slate-100 dark:border-slate-800 pt-2">
+                            <DetailRow label="Razão Social" value={data.razaoSocial} />
+                            <DetailRow label="CNPJ / CPF" value={
+                                <div className="flex items-center justify-end gap-3 font-mono">
+                                    <span>{data.cnpj}</span>
+                                    <button onClick={handleVerifyCnpj} className="text-[10px] bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 px-2 py-0.5 rounded text-slate-600 dark:text-slate-300 transition-colors no-print">
+                                        {verifyCnpjText}
+                                    </button>
+                                </div>
+                            } />
+                            <DetailRow label="Número do Documento" value={<span className="font-mono">{data.numeroNF}</span>} />
+                            <DetailRow label="Tipo de Documento" value={
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${data.documentoTipo === 'SERVICO' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>
+                                    {data.documentoTipo}
+                                </span>
+                            } />
+                            <DetailRow label="Local de Incidência" value={data.municipioIncidencia} />
+                            <DetailRow label="Código REINF" value={
+                                <div className="w-full">
+                                    <select
+                                        value={data.codigoReinf}
+                                        onChange={(e) => onValueChange('codigoReinf', e.target.value)}
+                                        className="w-full text-xs font-mono bg-transparent dark:bg-slate-800 border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none py-1 text-left text-slate-900 dark:text-slate-100"
+                                    >
+                                        {reinfCodes.map(code => (
+                                            <option key={code.code} value={code.code} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+                                                {code.code} — {code.description.substring(0, 40)}{code.description.length > 40 ? '...' : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            } />
+                        </div>
+                    </div>
+
+                    {/* Section: Cálculos (The Table) */}
+                    <div className="lg:col-span-12 mt-4">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="h-4 w-1 bg-[#003366] dark:bg-blue-500 rounded-full"></div>
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Demonstrativo de Cálculos Fiscais</h4>
+                        </div>
+                        <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 institutional-shadow">
+                            <table className="w-full text-sm leading-normal">
+                                <thead>
+                                    <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                                        <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Descrição dos Eventos</th>
+                                        <th className="px-6 py-4 text-center text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Base / Alíquota</th>
+                                        <th className="px-6 py-4 text-right text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Valores (R$)</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white dark:bg-slate-800">
+                                    <tr className="border-b border-slate-100 dark:border-slate-700/50">
+                                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400">Valor Bruto do Documento</td>
+                                        <td className="px-6 py-4 text-center text-slate-400 italic">—</td>
+                                        <td className="px-6 py-4 text-right font-mono font-semibold">{formatCurrency(data.valorBruto)}</td>
+                                    </tr>
+                                    <tr className="border-b border-slate-100 dark:border-slate-700/50">
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-slate-600 dark:text-slate-400">Retenção de IRRF</span>
+                                                {data.irrf.value === 0 && <span className="text-[10px] text-orange-600 dark:text-orange-400 italic">Dispensado conforme norma</span>}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <DecimalInput
+                                                    value={data.irrf.rate}
+                                                    onChange={(val) => onValueChange('aliquotaIR', val)}
+                                                    disabled={data.isMei === 'SIM' || data.optanteSimples === 'SIM'}
+                                                    className="w-12 text-center font-mono text-xs bg-transparent border-b border-slate-300 dark:border-slate-600 hover:border-blue-500 focus:border-blue-500 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800/50"
+                                                />
+                                                <span className="font-mono text-xs text-slate-500">%</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-mono text-red-600 dark:text-red-400">-{formatCurrency(data.irrf.value)}</td>
+                                    </tr>
+                                    <tr className="border-b border-slate-100 dark:border-slate-700/50">
+                                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400">Retenção de ISSQN</td>
+                                        <td className="px-6 py-4 text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <DecimalInput
+                                                    value={data.iss.rate}
+                                                    onChange={(val) => onValueChange('aliquotaISS', val)}
+                                                    className="w-12 text-center font-mono text-xs bg-transparent border-b border-slate-300 dark:border-slate-600 hover:border-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+                                                />
+                                                <span className="font-mono text-xs text-slate-500">%</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-mono text-red-600 dark:text-red-400">-{formatCurrency(data.iss.value)}</td>
+                                    </tr>
+                                    {data.inss.value > 0 && (
+                                        <tr className="border-b border-slate-100 dark:border-slate-700/50">
+                                            <td className="px-6 py-4 text-slate-600 dark:text-slate-400">Retenção de INSS</td>
+                                            <td className="px-6 py-4 text-center font-mono text-xs">{data.inss.rate.toFixed(2).replace('.', ',')}%</td>
+                                            <td className="px-6 py-4 text-right font-mono text-red-600 dark:text-red-400">-{formatCurrency(data.inss.value)}</td>
+                                        </tr>
+                                    )}
+                                    <tr className="bg-[#f8fafc] dark:bg-slate-900/30">
+                                        <td className="px-6 py-5 text-[#003366] dark:text-blue-400 font-bold uppercase tracking-wider">Valor Líquido a Pagar</td>
+                                        <td className="px-6 py-5 text-center text-slate-400 italic">—</td>
+                                        <td className="px-6 py-5 text-right font-mono text-lg font-bold text-slate-900 dark:text-white">{formatCurrency(data.valorLiquido)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Section: Parecer Técnico (Observations) */}
+                    <div className="lg:col-span-12 mt-2">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="h-4 w-1 bg-[#003366] dark:bg-blue-500 rounded-full"></div>
+                            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Parecer Técnico e Observações</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="p-5 rounded-xl bg-blue-50/50 dark:bg-slate-900/50 border border-blue-100 dark:border-slate-700">
+                                <div className="flex items-center gap-2 mb-3 text-blue-800 dark:text-blue-400">
+                                    <InfoIcon className="h-4 w-4" />
+                                    <span className="text-xs font-bold uppercase tracking-wider">Orientação sobre ISS</span>
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic border-l-2 border-blue-200 dark:border-blue-800/50 pl-4">
+                                    {data.issObservacao}
+                                </p>
+                            </div>
+                            <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
+                                <div className="flex items-center gap-2 mb-3 text-slate-700 dark:text-slate-400 font-bold">
+                                    <CheckIcon className="h-4 w-4" />
+                                    <span className="text-xs font-bold uppercase tracking-wider">Enquadramento Tributário</span>
+                                </div>
+                                <div className="flex flex-wrap gap-4">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-[10px] text-slate-400 uppercase">Simples Nacional</span>
+                                        <button onClick={() => onTaxStatusChange('optanteSimples')} className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${data.optanteSimples === 'SIM' ? 'bg-green-600 text-white shadow-md' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                            {data.optanteSimples === 'SIM' ? 'OPTANTE' : 'NÃO OPTANTE'}
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-[10px] text-slate-400 uppercase">Microempreendedor</span>
+                                        <button onClick={() => onTaxStatusChange('isMei')} className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all ${data.isMei === 'SIM' ? 'bg-green-600 text-white shadow-md' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                            {data.isMei === 'SIM' ? 'MEI' : 'NÃO MEI'}
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-col gap-1 flex-1 min-w-[120px]">
+                                        <span className="text-[10px] text-slate-400 uppercase">Base Cálc. INSS (R$)</span>
+                                        <DecimalInput
+                                            value={data.inss.base || 0}
+                                            isCurrency
+                                            onChange={(val) => onValueChange('baseCalculoINSS', val)}
+                                            disabled={data.isMei === 'SIM'}
+                                            className="px-3 py-1 text-[10px] font-bold font-mono rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-blue-500 outline-none w-full shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800/50"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1 w-20">
+                                        <span className="text-[10px] text-slate-400 uppercase">INSS (%)</span>
+                                        <DecimalInput
+                                            value={data.inss.rate}
+                                            onChange={(val) => onValueChange('aliquotaINSS', val)}
+                                            disabled={data.isMei === 'SIM'}
+                                            className="px-3 py-1 text-[10px] font-bold font-mono rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-blue-500 outline-none w-full shadow-sm text-center disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800/50"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section: Rateio (If active) */}
+                    {isSplitting && (
+                        <div className="lg:col-span-12 mt-4 print:block print-landscape">
+                            <div className="flex items-center gap-2 mb-4">
+                                <div className="h-4 w-1 bg-[#003366] dark:bg-blue-500 rounded-full"></div>
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400">Rateio de Liquidação por Centro de Custo/Empenho</h4>
+                            </div>
+                            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm transition-all">
+                                <table className="w-full text-[13px] text-left">
+                                    <thead className="bg-[#f8fafc] dark:bg-slate-900/50 text-[10px] uppercase font-bold text-slate-500">
+                                        <tr>
+                                            <th className="px-5 py-4">Nº Empenho</th>
+                                            <th className="px-5 py-4 text-right">Bruto (R$)</th>
+                                            <th className="px-5 py-4 text-right">IRRF</th>
+                                            <th className="px-5 py-4 text-right">ISS</th>
+                                            <th className="px-5 py-4 text-right">INSS</th>
+                                            <th className="px-5 py-4 text-right">Líquido (R$)</th>
+                                            <th className="px-5 py-4 no-print text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {processedSplits.map(s => (
+                                            <tr key={s.id} className="border-t border-slate-100 dark:border-slate-800">
+                                                <td className="px-5 py-3"><input type="text" value={s.empenho} onChange={e => handleUpdateSplit(s.id, 'empenho', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-blue-400 dark:focus:border-blue-500 focus:outline-none transition-colors" placeholder="000000/00" /></td>
+                                                <td className="px-5 py-3">
+                                                    <input type="text" value={new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(s.valorBruto)} onChange={e => handleUpdateSplit(s.id, 'valorBruto', e.target.value)} className="w-full text-right bg-transparent border-b border-transparent focus:border-blue-400 focus:outline-none transition-colors font-mono" />
+                                                </td>
+                                                <td className="px-5 py-3 text-right text-red-500 font-mono text-xs">-{formatCurrency(s.irrf)}</td>
+                                                <td className="px-5 py-3 text-right text-red-500 font-mono text-xs">-{formatCurrency(s.iss)}</td>
+                                                <td className="px-5 py-3 text-right text-red-500 font-mono text-xs">-{formatCurrency(s.inss)}</td>
+                                                <td className="px-5 py-3 text-right font-bold font-mono">{formatCurrency(s.valorLiquido)}</td>
+                                                <td className="px-5 py-3 text-center no-print">
+                                                    <button onClick={() => handleRemoveSplit(s.id)} className="p-1.5 text-slate-300 hover:text-red-500 transition-colors">
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot className="bg-slate-50 dark:bg-slate-900/30 border-t-2 border-slate-200 dark:border-slate-700">
+                                        <tr className="font-bold text-slate-900 dark:text-white">
+                                            <td className="px-5 py-4 uppercase">Total Consolidado</td>
+                                            <td className="px-5 py-4 text-right">{formatCurrency(splitTotals.valorBruto)}</td>
+                                            <td className="px-5 py-4 text-right">-{formatCurrency(splitTotals.irrf)}</td>
+                                            <td className="px-5 py-4 text-right">-{formatCurrency(splitTotals.iss)}</td>
+                                            <td className="px-5 py-4 text-right">-{formatCurrency(splitTotals.inss)}</td>
+                                            <td className="px-5 py-4 text-right">{formatCurrency(splitTotals.valorLiquido)}</td>
+                                            <td className="no-print"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 p-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 no-print">
+                                <button onClick={handleAddSplit} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-all shadow-sm">
+                                    <PlusCircleIcon className="h-4 w-4 text-[#003366] dark:text-blue-400" />
+                                    Adicionar Novo Item de Rateio
+                                </button>
+                                <div className="text-right mt-4 sm:mt-0 px-2 transition-all">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Diferença Residual</span>
+                                    <span className={`text-xl font-mono font-bold ${Math.abs(remainingAmountToSplit) > 0.01 ? 'text-orange-600' : 'text-green-600'}`}>
+                                        {formatCurrency(remainingAmountToSplit)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Integration / Actions Bottom Bar */}
+            <div className="bg-[#f8fafc] dark:bg-slate-900/60 px-8 py-6 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-6 no-print">
+                <button onClick={handleToggleSplitting} className="group flex items-center gap-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-[#003366] dark:hover:text-blue-400 transition-all">
+                    <div className={`p-2 rounded-lg transition-colors ${isSplitting ? 'bg-[#003366] text-white' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 group-hover:text-[#003366]'}`}>
+                        <SplitIcon className="h-5 w-5" />
+                    </div>
+                    <span>{isSplitting ? 'RECOLHER RATEIO' : 'DIVIDIR LIQUIDAÇÃO (EMPENHOS)'}</span>
+                </button>
+
+                <div className="relative group w-full sm:w-auto">
+                    <button onClick={() => setIsJsonVisible(!isJsonVisible)} className="w-full flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl transition-all uppercase tracking-widest">
+                        <ChevronDownIcon className={`h-4 w-4 transition-transform duration-300 ${isJsonVisible ? 'rotate-180' : ''}`} />
+                        Painel de Integração JSON
+                    </button>
+
+                    <div className={`absolute bottom-full right-0 mb-4 w-96 max-w-[90vw] transition-all duration-300 ${isJsonVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
+                        <div className="bg-slate-900 rounded-2xl shadow-2xl p-6 border border-slate-800">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Metadata do Cálculo</span>
+                                <button onClick={handleCopyJson} className="p-2 text-slate-400 hover:text-white transition-colors">
+                                    {copied ? <CheckIcon className="h-4 w-4 text-green-500" /> : <ClipboardIcon className="h-4 w-4" />}
+                                </button>
+                            </div>
+                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                <pre className="text-[11px] font-mono text-blue-300"><code>{jsonData}</code></pre>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        {/* --- Seção de Rateio --- */}
-        <div className={`px-6 pt-4 pb-6 ${!isSplitting ? 'hidden print:hidden' : 'print:block'}`}>
-            <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-4 text-center print:text-lg print:mb-4">Rateio da Liquidação por Empenho</h2>
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 dark:bg-slate-700/50 text-xs uppercase text-slate-700 dark:text-slate-300">
-                        <tr>
-                            <th className="px-4 py-3">Nº do Empenho</th>
-                            <th className="px-4 py-3 text-right">Valor Bruto</th>
-                            <th className="px-4 py-3 text-right">(-) IRRF</th>
-                            <th className="px-4 py-3 text-right">(-) ISS</th>
-                            <th className="px-4 py-3 text-right">(-) INSS</th>
-                            <th className="px-4 py-3 text-right font-bold">(=) Valor Líquido</th>
-                            <th className="px-4 py-3 no-print"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {processedSplits.map(split => (
-                            <tr key={split.id} className="border-b dark:border-slate-700">
-                                <td className="px-4 py-2"><input type="text" value={split.empenho} onChange={e => handleUpdateSplit(split.id, 'empenho', e.target.value)} className="w-full bg-transparent p-1 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none dark:bg-slate-800" placeholder="Digite o nº" /></td>
-                                <td className="px-4 py-2"><input type="text" value={new Intl.NumberFormat('pt-BR', {minimumFractionDigits: 2}).format(split.valorBruto)} onChange={e => handleUpdateSplit(split.id, 'valorBruto', e.target.value)} className="w-28 text-right bg-transparent p-1 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none dark:bg-slate-800" /></td>
-                                <td className="px-4 py-2 text-right text-red-600 dark:text-red-400">{formatCurrency(split.irrf)}</td>
-                                <td className="px-4 py-2 text-right text-red-600 dark:text-red-400">{formatCurrency(split.iss)}</td>
-                                <td className="px-4 py-2 text-right text-red-600 dark:text-red-400">{formatCurrency(split.inss)}</td>
-                                <td className="px-4 py-2 text-right font-bold text-slate-800 dark:text-slate-100">{formatCurrency(split.valorLiquido)}</td>
-                                <td className="px-4 py-2 text-center no-print"><button onClick={() => handleRemoveSplit(split.id)} className="p-1 text-slate-400 hover:text-red-500"><TrashIcon className="h-4 w-4" /></button></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                    <tfoot>
-                        <tr className="font-bold bg-slate-50 dark:bg-slate-700/50 text-slate-800 dark:text-slate-100">
-                            <td className="px-4 py-3">TOTAL</td>
-                            <td className="px-4 py-3 text-right">{formatCurrency(splitTotals.valorBruto)}</td>
-                            <td className="px-4 py-3 text-right">{formatCurrency(splitTotals.irrf)}</td>
-                            <td className="px-4 py-3 text-right">{formatCurrency(splitTotals.iss)}</td>
-                            <td className="px-4 py-3 text-right">{formatCurrency(splitTotals.inss)}</td>
-                            <td className="px-4 py-3 text-right">{formatCurrency(splitTotals.valorLiquido)}</td>
-                            <td className="no-print"></td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            <div className="flex justify-between items-center mt-4 no-print">
-                <button onClick={handleAddSplit} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"><PlusCircleIcon className="h-5 w-5" /> Adicionar Empenho</button>
-                <div className="text-right">
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Valor Restante a Liquidar:</p>
-                    <p className={`text-lg font-bold ${Math.abs(remainingAmountToSplit) > 0.01 ? 'text-orange-500' : 'text-green-600'}`}>{formatCurrency(remainingAmountToSplit)}</p>
-                </div>
-            </div>
-        </div>
-
-        <div className="bg-slate-50/70 dark:bg-slate-900/40 p-4 rounded-b-xl border-t border-slate-200 dark:border-slate-700">
-            <div className={`flex justify-between items-center ${isJsonVisible ? 'mb-2' : ''}`}>
-                 <button onClick={handleToggleSplitting} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 no-print">
-                    <SplitIcon className="h-5 w-5" />
-                    {isSplitting ? 'Ver Cálculo Total' : 'Dividir Liquidação'}
-                 </button>
-                 <button onClick={() => setIsJsonVisible(!isJsonVisible)} className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200" aria-expanded={isJsonVisible} aria-controls="json-content">
-                    JSON para Integração
-                    <ChevronDownIcon className={`h-5 w-5 text-slate-500 transition-transform duration-200 ${isJsonVisible ? 'rotate-180' : ''}`} />
-                 </button>
-            </div>
-            <div id="json-content" className={`transition-[max-height,margin] duration-500 ease-in-out overflow-hidden ${isJsonVisible ? 'max-h-96 mt-2' : 'max-h-0'}`}>
-                <div className="relative bg-slate-900 dark:bg-black/50 rounded-lg">
-                    <pre className="p-4 text-sm text-slate-100 overflow-x-auto"><code>{jsonData}</code></pre>
-                     <button onClick={handleCopyJson} className="absolute top-2 right-2 p-2 bg-slate-700/80 rounded-md hover:bg-slate-600 transition-colors" aria-label="Copiar JSON">
-                        {copied ? (<CheckIcon className="h-5 w-5 text-green-400" />) : (<ClipboardIcon className="h-5 w-5 text-slate-300" />)}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-  );
+    );
 };
 
 export default memo(ResultsCard);

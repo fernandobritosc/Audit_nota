@@ -1,42 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cálculo de Retenções | Sefaz Senador Canedo</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sefaz Audit | Prefeitura de Senador Canedo</title>
+  <!-- Modern Institutional Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --gov-blue: #003366;
+      --gov-blue-light: #004d99;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Refined UI components */
+    .institutional-shadow {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+
+    /* Transitions */
+    body,
+    .bg-white,
+    .bg-slate-50,
+    .bg-slate-900 {
+      transition: background-color 0.2s ease-in-out, color 0.1s ease-in-out;
+    }
+
+    @media print {
+      html.dark {
+        color-scheme: light;
+      }
+
       body {
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
+        background-color: #fff;
       }
 
-      /* Smooth transitions for dark mode */
-      body, .bg-white, .bg-slate-50, .bg-slate-100, .bg-slate-50\/50, .bg-slate-900 {
-        transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+      .no-print {
+        display: none !important;
       }
 
-      @media print {
-        html.dark {
-            color-scheme: light; /* Ensure print is always light mode */
-        }
-        body {
-          background-color: #fff;
-        }
-        .no-print {
-          display: none !important;
-        }
-        main {
-          box-shadow: none !important;
-          border: none !important;
-          padding: 0 !important;
-          margin: 0 !important;
-        }
-        .results-json-section {
-          display: none !important;
-        }
+      main {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
       }
-    </style>
+
+      /* Layout Improvements for PDF */
+      @page {
+        margin: 1.5cm;
+        size: auto;
+      }
+
+      .page-break-before {
+        page-break-before: always;
+        break-before: page;
+      }
+
+      .print-landscape {
+        page-break-before: always;
+        break-before: page;
+      }
+    }
+
+    /* Specific style for landscape orientation handled by browser print */
+    @media print and (orientation: landscape) {
+      @page {
+        size: landscape;
+      }
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -47,17 +89,19 @@
   }
 }
 </script>
-<script>
+  <script>
     // Avoids "flash of incorrect theme"
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark')
+      document.documentElement.classList.add('dark')
     } else {
-        document.documentElement.classList.remove('dark')
+      document.documentElement.classList.remove('dark')
     }
-</script>
+  </script>
 </head>
-  <body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
-    <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
-  </body>
+
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+  <div id="root"></div>
+  <script type="module" src="./index.tsx"></script>
+</body>
+
 </html>

@@ -245,143 +245,170 @@ const App: React.FC = () => {
   }
   
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-900 font-sans print:p-0 print:bg-white">
-      <div className="w-full max-w-2xl mx-auto print:max-w-none print:w-full">
-        <header className="text-center mb-6 relative print:mb-4">
-          <div className="absolute top-0 right-0 flex items-center gap-2 no-print">
-            {/* Only show "Change Key" button in local development */}
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 font-sans print:bg-white transition-colors duration-200">
+      {/* Institutional Top Bar */}
+      <div className="w-full bg-[#003366] text-white py-1.5 px-4 text-[11px] font-medium tracking-wide uppercase no-print">
+        <div className="max-w-5xl mx-auto flex justify-between items-center">
+            <span className="opacity-90">Portal da Transparência - Senador Canedo</span>
+            <div className="flex gap-4 opacity-80">
+                <span>SEFAZ - Gerência de Contabilidade</span>
+                <span className="hidden sm:inline">Apoio à Auditoria Fiscal</span>
+            </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 sm:py-12 print:p-0">
+        <header className="flex flex-col sm:flex-row items-center sm:items-end justify-between mb-10 gap-6 border-b border-slate-200 dark:border-slate-800 pb-8 relative">
+          <div className="flex items-center gap-5">
+            <div className="p-3 bg-white dark:bg-slate-800 rounded-xl institutional-shadow border border-slate-200 dark:border-slate-700 print:p-0 print:border-none print:shadow-none">
+                <LogoIcon className="h-10 w-10 text-[#003366] dark:text-blue-400 print:h-8 print:w-8"/>
+            </div>
+            <div className="text-center sm:text-left">
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+                  Auditoria de Notas Fiscais
+              </h1>
+              <div className="mt-1.5 flex flex-col sm:flex-row sm:items-center gap-x-3 text-slate-500 dark:text-slate-400 text-sm">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Prefeitura de Senador Canedo</span>
+                <span className="hidden sm:inline opacity-30">|</span>
+                <span>Secretaria de Finanças</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 no-print">
             {isLocalDevelopment && (
               <button
                 onClick={handleChangeKey}
-                className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-slate-900 transition-colors"
-                title="Alterar Chave de API"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg institutional-shadow hover:border-red-200"
+                title="Sair / Alterar Chave"
               >
-                <LogOutIcon className="h-6 w-6" />
+                <LogOutIcon className="h-4 w-4" />
+                <span className="hidden md:inline">Alterar Chave</span>
               </button>
             )}
             <ThemeToggle />
           </div>
-          <div className="flex justify-center items-center gap-3 mb-1">
-            <LogoIcon className="h-8 w-8 text-slate-700 dark:text-slate-300 print:h-7 print:w-7"/>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-800 dark:text-slate-100 print:text-2xl">
-              Cálculo de Retenções
-            </h1>
-          </div>
-          <p className="text-lg font-medium text-slate-600 dark:text-slate-300 print:text-base">
-            Prefeitura Municipal de Senador Canedo - GO
-          </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400 print:text-sm">
-            Gerência de Contabilidade - SEFAZ
-          </p>
         </header>
 
-        <main className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200/80 dark:border-slate-700 w-full print:p-0 print:shadow-none print:border-none">
-          <>
+        <main className="w-full">
+          <div className="bg-white dark:bg-slate-800 rounded-xl institutional-shadow border border-slate-200 dark:border-slate-700 overflow-hidden print:border-none print:shadow-none">
             {!result && !isLoading && (
               <div className="no-print">
-                <div className="mb-6 border-b border-slate-200 dark:border-slate-700">
-                    <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-                        <button
-                            onClick={() => setMode('analysis')}
-                            className={`${
-                                mode === 'analysis'
-                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:border-slate-500'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg transition-colors`}
-                        >
-                            Analisar Documento
-                        </button>
-                        <button
-                            onClick={() => setMode('manual')}
-                            className={`${
-                                mode === 'manual'
-                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:border-slate-500'
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg transition-colors`}
-                        >
-                            Cálculo Manual
-                        </button>
-                    </nav>
+                <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+                    <button
+                        onClick={() => setMode('analysis')}
+                        className={`flex-1 py-4 px-6 text-sm font-bold uppercase tracking-wider transition-all ${
+                            mode === 'analysis'
+                            ? 'bg-white dark:bg-slate-800 text-[#003366] dark:text-blue-400 border-b-2 border-[#003366] dark:border-blue-400'
+                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+                        }`}
+                    >
+                        Análise Automatizada (IA)
+                    </button>
+                    <button
+                        onClick={() => setMode('manual')}
+                        className={`flex-1 py-4 px-6 text-sm font-bold uppercase tracking-wider transition-all ${
+                            mode === 'manual'
+                            ? 'bg-white dark:bg-slate-800 text-[#003366] dark:text-blue-400 border-b-2 border-[#003366] dark:border-blue-400'
+                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+                        }`}
+                    >
+                        Lançamento Manual
+                    </button>
                 </div>
 
-                {mode === 'analysis' ? (
-                    <>
-                        <FileUploader onFileChange={handleFileChange} />
-                        {files.length > 0 && (
-                            <button
-                                onClick={handleBatchAnalysis}
-                                disabled={isLoading}
-                                className="w-full mt-6 bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center justify-center disabled:bg-slate-400 disabled:cursor-not-allowed"
-                            >
-                                {`Analisar ${files.length} ${files.length > 1 ? 'Documentos' : 'Documento'}`}
-                            </button>
-                        )}
-                    </>
-                ) : (
-                    <ManualEntryForm onSubmit={handleManualCalculation} />
-                )}
+                <div className="p-8">
+                    {mode === 'analysis' ? (
+                        <div className="max-w-2xl mx-auto">
+                            <FileUploader onFileChange={handleFileChange} />
+                            {files.length > 0 && (
+                                <button
+                                    onClick={handleBatchAnalysis}
+                                    disabled={isLoading}
+                                    className="w-full mt-8 bg-[#003366] hover:bg-[#004d99] text-white font-bold py-4 px-6 rounded-lg transition-all shadow-md active:scale-[0.98] disabled:bg-slate-300 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                                >
+                                    <span>Iniciar Auditoria de {files.length} {files.length > 1 ? 'Documentos' : 'Documento'}</span>
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <ManualEntryForm onSubmit={handleManualCalculation} />
+                    )}
+                </div>
               </div>
             )}
 
             {isLoading && (
-              <div className="no-print">
+              <div className="p-8 no-print">
                 <ResultsCardSkeleton batchProgress={batchProgress} />
               </div>
             )}
             
             {error && (
-               <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg no-print">
-                  <AlertTriangleIcon className="h-8 w-8 text-red-500 mx-auto mb-2" />
-                  <p className="text-red-700 dark:text-red-300 font-semibold">Ocorreu um erro</p>
-                  <p className="text-red-600 dark:text-red-400 text-sm mt-1">{error}</p>
-                   <button 
-                      onClick={handleReset} 
-                      className="mt-4 bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors text-sm">
-                      Tentar Novamente
-                  </button>
+               <div className="p-8 no-print">
+                   <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-xl p-6 text-center">
+                      <AlertTriangleIcon className="h-10 w-10 text-red-500 mx-auto mb-4" />
+                      <h3 className="text-red-800 dark:text-red-300 font-bold text-lg">Falha no Processamento</h3>
+                      <p className="text-red-600 dark:text-red-400 mt-2 text-sm leading-relaxed max-w-md mx-auto">{error}</p>
+                       <button 
+                          onClick={handleReset} 
+                          className="mt-6 bg-white dark:bg-slate-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 font-bold py-2.5 px-6 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm institutional-shadow">
+                          Tentar Novamente
+                      </button>
+                   </div>
                </div>
             )}
 
             {result && (
-              <div>
+              <div className="p-0">
                 <ResultsCard 
                   data={result} 
                   onTaxStatusChange={handleTaxStatusChange}
                   onValueChange={handleValueChange}
                 />
-                <div className="mt-6 flex flex-col sm:flex-row gap-4 no-print">
+                <div className="p-8 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-4 no-print">
                    <button
                       onClick={() => window.print()}
-                      className="w-full sm:w-auto flex-1 bg-gray-600 dark:bg-slate-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-gray-700 dark:hover:bg-slate-500 transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 flex items-center justify-center gap-2 bg-slate-700 dark:bg-slate-600 text-white font-bold py-4 px-6 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-500 transition-all shadow-sm"
                     >
                       <PrinterIcon className="h-5 w-5" />
-                      Imprimir PDF
+                      Gerar Relatório PDF
                   </button>
                   <button 
                     onClick={handleReset} 
-                    className="w-full sm:w-auto flex-1 bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                    Novo Cálculo
+                    className="flex-1 bg-[#003366] text-white font-bold py-4 px-6 rounded-xl hover:bg-[#004d99] transition-all shadow-md">
+                    Nova Consulta Analítica
                   </button>
                 </div>
               </div>
             )}
-          </>
+          </div>
         </main>
 
         {history.length > 0 && !isLoading && (
-            <HistoryPanel 
-                history={history}
-                onRestore={handleRestoreFromHistory}
-                onClear={handleClearHistory}
-            />
+            <div className="mt-12 no-print">
+                <div className="flex items-center gap-3 mb-6 px-2">
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">Consultas Recentes</h2>
+                    <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800"></div>
+                </div>
+                <HistoryPanel 
+                    history={history}
+                    onRestore={handleRestoreFromHistory}
+                    onClear={handleClearHistory}
+                />
+            </div>
         )}
 
-        <footer className="text-center mt-8 text-sm text-slate-400 dark:text-slate-500 no-print">
-          <p>
-            © {new Date().getFullYear()} Prefeitura Municipal de Senador Canedo - GO | Gerência de Contabilidade - SEFAZ
-          </p>
-          <p className="text-xs mt-1">
-            Powered by Google Gemini API.
+        <footer className="mt-16 pb-8 text-center no-print">
+          <div className="flex justify-center items-center gap-4 mb-4">
+              <div className="h-px w-8 bg-slate-200 dark:bg-slate-800 text-slate-800"></div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Desenvolvido por SEFAZ/GO</span>
+              <div className="h-px w-8 bg-slate-200 dark:bg-slate-800"></div>
+          </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+            © {new Date().getFullYear()} Gerência de Contabilidade - Secretaria de Finanças<br/>
+            Prefeitura Municipal de Senador Canedo - GO
           </p>
         </footer>
       </div>
